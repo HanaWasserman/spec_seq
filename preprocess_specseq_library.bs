@@ -1,0 +1,34 @@
+#!/bin/bash
+
+
+# This script is for pre-processing the raw fastq for read 2 which requires reverse complement. 
+# Assumes that adapters are aleady trimmed.
+# Does not include any filtration of average QC across individual reads.
+
+# Install seqkit if necessary
+if ! command -v seqkit &> /dev/null; then
+    echo "seqkit could not be found. Please install it with the following command:"
+    echo "    conda install -c bioconda seqkit"
+    exit 1
+fi
+
+# File names
+input_fastq="$1"
+input_fastq_name="${input_fastq%.fastq}"
+rc_fastq="${input_fastq_name}_rc.fastq"
+rc_seqs="${input_fastq_name}_rc_seqs.txt"
+
+echo "Running reverse complementation on $input_fastq..."
+seqkit seq -r -p "$input_fastq" -o "$rc_fastq"
+
+if [ $? -eq 0 ]; then
+    echo "Reverse complement created successfully: $rc_fastq"
+else
+    echo "An error occurred during processing."
+    exit 1
+fi
+
+echo "Extracting sequences to $rc_seqs..."
+awk 'NR % 4 == 2' "$rc_fastq" > "$rc_seqs"
+
+echo "Pre-processing complete."
